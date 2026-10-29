@@ -1,8 +1,13 @@
 from pathlib import Path
-import hashlib,zipfile,io
+import hashlib, io, zipfile
 root=Path(__file__).resolve().parent
-parts=sorted(root.glob("pom-space-source.zip.part*"))
+parts=[root/f"pom-space-source.zip.part{i:02}" for i in range(1,5)]
 data=b"".join(p.read_bytes() for p in parts)
-assert hashlib.sha256(data).hexdigest()=="3c45a8caf2d6766704f80d6c454a27ae861a3b2ac563de96c67d2345b4fe975d", "Download all parts before extracting"
-with zipfile.ZipFile(io.BytesIO(data)) as z:z.extractall(root)
-print("Ready: open pom-space, then npm ci, npm run build, npm start")
+if hashlib.sha256(data).hexdigest() != "57828bc23e0e8d16bd175d9899254167d108a79b9233249e2b923f727b03550f":
+    raise SystemExit("Archive mismatch: download all four parts from the same revision.")
+with zipfile.ZipFile(io.BytesIO(data)) as z:
+    for name in z.namelist():
+        target=(root/name).resolve()
+        if not target.is_relative_to(root): raise SystemExit("Unsafe archive path")
+    z.extractall(root)
+print("Verified and extracted pom-space. Read pom-space/README.md before setup.")
